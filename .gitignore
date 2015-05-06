@@ -30,4 +30,7 @@
 
 # Debug files
 *.dSYM/
+
+# SoneFiveIPC
 build/*
+*.DS_Store
