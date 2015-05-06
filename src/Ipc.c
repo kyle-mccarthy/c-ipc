@@ -16,8 +16,10 @@ static buffer_t data_buffer;
  **********************************************************/
 
 /**
- * Create a 4 KB buffer of random integer values 
- *
+ * Create a 4 KB buffer of random integer values.  This will malloc memory for the data
+ * pointer inside of the struct.  Next it will fill the data pointer with BUFFER_SIZE ints
+ * @param buffer_t - pointer to the buffer
+ * @return void
  */
 void _init_buffer(buffer_t* buffer);
 
@@ -33,9 +35,6 @@ void _init_message_queue();
 
 void init_ipc() {
     _init_buffer(&data_buffer);
-    for (unsigned int i = 0; i < BUFFER_SIZE; i++) {
-        printf("%d", data_buffer.data[i]);
-    }
 }
 
 void _init_buffer(buffer_t* buffer) {
@@ -50,3 +49,30 @@ void _init_buffer(buffer_t* buffer) {
 void _init_message_queue() {
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
