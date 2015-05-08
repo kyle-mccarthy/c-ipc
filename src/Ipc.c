@@ -91,7 +91,7 @@ void init_message_queue() {
                 printf("%s\n", "ERROR: Failed to receive message.");
                 exit(1);
             }
-            // step tr
+            // step through the response byte by byte and validate the data passed
             for (int i = 0; i < MSG_BUFFER; i++) {
                 // we need to calcuate the current index for the buffer relative
                 // to the current block and the index of that block
