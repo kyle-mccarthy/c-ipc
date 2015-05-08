@@ -24,7 +24,8 @@ void reset_ipc();
 void init_message_queue();
 
 /**
- *
+ * Create a pop and use it to send a 4KB buffer split into equal 128 byte blocks from a
+ * parent process to the child process.  Have the child process verify the data.
  * @return void
  */
 void init_pipe();
