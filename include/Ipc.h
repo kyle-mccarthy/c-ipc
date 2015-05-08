@@ -2,7 +2,8 @@
 #define _IPC_H_
 
 /**
- *
+ * Call the functions that will initialize the IPC.  All this really does is call a 
+ * private function to initialize the data buffer.   
  * @return void
  */
 void init_ipc();
@@ -15,9 +16,17 @@ void init_ipc();
 void reset_ipc();
 
 /**
- *
+ * Create a message queue that will pass a 4KB buffer of data between a child and parent
+ * process in blocks of 128 bytes and then perform a data integrity check on the data
+ * received by the child.
  * @return void
  */
 void init_message_queue();
+
+/**
+ *
+ * @return void
+ */
+void init_pipe();
 
 #endif
