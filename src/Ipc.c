@@ -65,7 +65,7 @@ void init_message_queue() {
     // check integrity of the data
     if (data_buffer.data == NULL) {
         printf("%s\n", "ERROR: NULL data buffer passed to message queue.");
-        exit(-1);
+        exit(1);
     }
     // create the message queue
     int mqid = msgget(KEY, MSG_PERM|IPC_CREAT|IPC_EXCL);
@@ -74,7 +74,7 @@ void init_message_queue() {
     if (mqid < 0) {
         perror(strerror(errno));
         printf("%s\n", "ERROR: Failed to create msg queue.");
-        exit(-1);
+        exit(1);
     }
 
     pid_t pid = fork();
@@ -83,15 +83,14 @@ void init_message_queue() {
     message_t message;
     message_t response;
 
-    // child process
-    if (pid == 0) {
+    if (pid == 0) { // child process
         // for c blocks -- 4096/128 -- number of messages to send
         for (int c = 0; c < (BUFFER_SIZE/MSG_BUFFER); c++) {
             // get the message
             if (msgrcv(mqid, &response, sizeof(message_buffer_t), 1, 0) != MSG_BUFFER) {
                 perror(strerror(errno));
                 printf("%s\n", "ERROR: Failed to receive message.");
-                exit(-1);
+                exit(1);
             }
             for (int i = 0; i < MSG_BUFFER; i++) {
                 // we need to calcuate the current index for the buffer relative
@@ -101,15 +100,14 @@ void init_message_queue() {
                     printf("%s\n", "ERROR: Mismatch data received.");
                     printf("%s %d %s %d %s %d \n", "Index", (c * MSG_BUFFER) + i, ":", 
                         data_buffer.data[(c * MSG_BUFFER) + i], "!=", response.data[i]);
-                    exit(-1);
+                    exit(1);
                 }
             }
         }
         // the data validation passed the byte by byte test for each 128 byte block
-        printf("%s\n", "PASSED: The data received by the child patches the main data_buffer");
+        printf("%s\n", "PASSED: The data received by the child matches the main data_buffer");
         exit(0); // exit the child
-    // parent process
-    } else if (pid > 0) {
+    } else if (pid > 0) { // parent process
         for (int c = 0; c < (BUFFER_SIZE/MSG_BUFFER); c++) {
             // set the message
             message.type = 1;
@@ -123,13 +121,13 @@ void init_message_queue() {
             if (msgsnd(mqid, &message, sizeof(message_buffer_t), 0) != 0) {
                 perror(strerror(errno));
                 printf("%s\n", "ERROR: Failed to send message.");
-                exit(-1);
+                exit(1);
             }
         }
-    } else {
+    } else { // error forking
         perror(strerror(errno));
         printf("%s\n", "ERROR: Failed to fork in init_message_queue");
-        exit(-1);
+        exit(1);
     }
 
     waitpid(pid, &status, WUNTRACED | WCONTINUED);
@@ -138,12 +136,75 @@ void init_message_queue() {
     if (msgctl(mqid, IPC_RMID, NULL) < 0) {
         perror(strerror(errno));
         printf("%s\n", "ERROR: Failed to clear msg queue.");
-        exit(-1);
+        exit(1);
     }
 
 }
 
 void init_pipe() {
+
+    // set up the pipe and forking
+    int fd[2];
+    pid_t pid;
+    int status;
+
+    // check to make sure the pipe was created
+    if (pipe(fd) != 0) {
+        perror(strerror(errno));
+        printf("%s\n", "ERROR: Failed to create the pipe");
+        exit(1);
+    }
+
+    // buffers for sending data
+    unsigned char send[MSG_BUFFER];
+    unsigned char response[MSG_BUFFER];
+
+    if ((pid = fork()) == 0) { // child
+        // fd[1] for the child side of the pipe -- f[0] reads
+        close(fd[1]);
+        for (int c = 0; c < (BUFFER_SIZE/MSG_BUFFER); c++) {
+            if (read(fd[0], response, sizeof(send)) < 0) {
+                perror(strerror(errno));
+                printf("%s\n", "ERROR: Error reading data from pipe in init_pipe");
+                exit(1);
+            }
+            for (int i = 0; i < sizeof(response); i++) {
+                // check the integrity of the data recieved from the parent process
+                if (data_buffer.data[(c * MSG_BUFFER) + i] != response[i]) {
+                    printf("%s\n", "ERROR: Mismatch data received.");
+                    printf("%s %d %s %d %s %d \n", "Index", (c * MSG_BUFFER) + i, ":", 
+                        data_buffer.data[(c * MSG_BUFFER) + i], "!=", response[i]);
+                    exit(1);                
+                }
+            }
+        }
+        // the data validation passed the byte by byte test for each 128 byte block
+        printf("%s\n", "PASSED: The data received by the child matches the main data_buffer");
+        exit(0); // exit the child
+
+    } else if (pid > 0) { // parent
+        close(fd[0]);
+        // fd[0] for the parent side of the pipe -- f[1] writes
+        for (int c = 0; c < (BUFFER_SIZE/MSG_BUFFER); c++) {
+            // set the data to send to the child
+            for (int i = 0; i < MSG_BUFFER; i++) {
+                // (c * MSG_BUFFER) + i -- offset -- see init_message_queue
+                send[i] = data_buffer.data[(c * MSG_BUFFER) + i];
+            }
+            if (write(fd[1], send, sizeof(response)) < 0) {
+                perror(strerror(errno));
+                printf("%s\n", "ERROR: Error writing data to the pipe in init_pipe");
+                exit(1);
+            }
+        }
+    } else { // error forking
+        perror(strerror(errno));
+        printf("%s\n", "ERROR: Failed to fork in init_pipe");
+        exit(1);
+    }
+
+    waitpid(pid, &status, WUNTRACED | WCONTINUED);
+
 
 }
 
