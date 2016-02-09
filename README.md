@@ -1,4 +1,3 @@
-# cs4520-ipc
-cs4520-ipc
+# Inter-Process Communication
 
-for grading of message queue and pipes
+Demonstration of Inter-Process Communication with C for a university assignment.  Utilizes queues and pipes to send the messages.
